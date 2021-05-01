@@ -1,9 +1,9 @@
-import json
 from typing import Dict, List, Tuple
 from pathlib import Path
 
 import tensorflow as tf
 import tensorflow_hub as hub
+import tensorflow_text as text
 
 import numpy as np
 import pandas as pd
@@ -43,29 +43,27 @@ class NLPPipeline:
             self._bert_model = hub.load('https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-4_H-512_A-8/1')
             return self._bert_model
 
-    def preprocess(self) -> Tuple[List]:
+    def preprocess(self) -> Tuple[pd.Series]:
         logger.info("Start preprocessing")
+
+        # Drop nas
+        cleaned_dataset = self.description_dataset.loc[~self.description_dataset.description.isna()].reset_index()
 
         # Train test splitting
         # Randomly sample data
-        n_samples = len(self.description_dataset)
+
+        n_samples = len(cleaned_dataset)
         train_idx = np.random.choice(range(n_samples), size=(int(0.8 * n_samples),), replace=False)
-        test_idx =
-        train_x = self.description_dataset.loc[train_idx]
-        test_x = np.delete(self.description_dataset, train_idx)
+        train_x = cleaned_dataset.loc[train_idx].description
+        test_x = cleaned_dataset.drop(train_idx).description
 
         # Subset y
-        mask = self.counts_dataset.index.isin(self.book_ids[train_idx])
-        train_y = self.counts_dataset[mask]
-        test_y = self.counts_dataset[~mask]
-        breakpoint()
-
-        assert len(train_y) == len(train_x)
-        assert len(test_y) == len(test_x)
+        train_y = cleaned_dataset.loc[train_idx].text_reviews_count_bks
+        test_y = cleaned_dataset.drop(train_idx).text_reviews_count_bks
 
         return train_x, test_x, train_y, test_y
 
-    def build_model(self):
+    def build_model(self) -> tf.keras.Model:
         # From https://www.tensorflow.org/tutorials/text/classify_text_with_bert
         logger.info("Building model")
         text_input = tf.keras.layers.Input(shape=(), dtype=tf.string, name='text')
@@ -100,8 +98,9 @@ class NLPPipeline:
 
 def load_description_data(input_filepath: str, subsample: int = None) -> pd.DataFrame:
 
-    df = pd.read_csv(input_filepath, use_cols=['text_reviews_count_bks', 'description'], subsample=subsample)
+    df = pd.read_csv(input_filepath, usecols=['text_reviews_count_bks', 'description'], nrows=subsample)
     return df
+
 
 if __name__ == '__main__':
 
