@@ -69,13 +69,13 @@ class NLPPipeline:
         test_x = np.delete(descriptions, train_idx)
 
         # Subset y
-        # mask = self.counts_dataset.index.isin(ids)
-        # train_y = np.array(self.counts_dataset[mask])
-        # test_y = np.array(self.counts_dataset[~mask])
+        mask = self.counts_dataset.index.isin(ids)
+        train_y = np.array(self.counts_dataset[mask])
+        test_y = np.array(self.counts_dataset[~mask])
 
         # HACK!!! Please remove. Only for testing
-        train_y = np.random.randint(0, 20, (len(train_x),))
-        test_y = np.random.randint(0, 20, (len(test_x),))
+        # train_y = np.random.randint(0, 20, (len(train_x),))
+        # test_y = np.random.randint(0, 20, (len(test_x),))
 
         return train_x, test_x, train_y, test_y
 
@@ -99,6 +99,9 @@ class NLPPipeline:
         model.fit(x=train_x, y=train_y, validation_data=(test_x, test_y), callbacks=es, epochs=100)
         return model
 
+    def save_model(self, model, output_path):
+        NotImplemented
+
     def run(self):
 
         train_processed, test_processed, train_y, test_y = self.preprocess()
@@ -107,18 +110,18 @@ class NLPPipeline:
         self.save_model(model_fit)
 
 
-def load_description_data(input_filepath: str, subsample: int = None):
-    # TODO: Grab the Y variables!! From the other json, containing interactions
+def load_description_data(input_filepath: str, subsample: int = None) -> List[Dict]:
     with open(input_filepath, 'r') as f:
-        if subsample:
-            output = []
-            for _ in range(subsample):
-                book = json.loads(f.readline())
-                output.append(book)
-            return output
-        else:
-            data = json.load(f)
-            return data
+
+        output = []
+
+        while f:
+            data = json.loads(f.readline())
+            output.append(data)
+            if subsample:
+                if len(output) > subsample:
+                    break
+        return output
 
 
 def load_book_counts_data(input_filepath: str, subsample: int = None) -> pd.Series:
