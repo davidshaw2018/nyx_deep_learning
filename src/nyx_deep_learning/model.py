@@ -4,6 +4,8 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_text as text
+from tensorflow import keras
+from keras.optimizers import Adam
 
 import numpy as np
 import pandas as pd
@@ -48,6 +50,7 @@ class NLPPipeline:
 
         # Drop nas
         cleaned_dataset = self.description_dataset.loc[~self.description_dataset.description.isna()].reset_index()
+        assert cleaned_dataset.isnull().sum() == 0
 
         # Train test splitting
         # Randomly sample data
@@ -78,7 +81,8 @@ class NLPPipeline:
 
     def fit_model(self, train_x, train_y, test_x, test_y, model):
         logger.info("Fitting model")
-        model.compile(optimizer='SGD', loss='mse', metrics='mse')
+        opt = Adam(lr=.0001)
+        model.compile(optimizer=opt, loss='mean_squared_error')
         es = tf.keras.callbacks.EarlyStopping(patience=3)
         model.fit(x=train_x, y=train_y, validation_data=(test_x, test_y), callbacks=es, epochs=100)
         return model
