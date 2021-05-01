@@ -13,10 +13,8 @@ from loguru import logger
 
 class NLPPipeline:
 
-    def __init__(self, ids: np.array, description_dataset: np.array, counts_dataset: pd.Series):
-        self.book_ids = ids
+    def __init__(self, description_dataset: pd.DataFrame):
         self.description_dataset = description_dataset
-        self.counts_dataset = counts_dataset
 
     @property
     def preprocessor(self):
@@ -52,8 +50,8 @@ class NLPPipeline:
         # Randomly sample data
         n_samples = len(self.description_dataset)
         train_idx = np.random.choice(range(n_samples), size=(int(0.8 * n_samples),), replace=False)
-
-        train_x = self.description_dataset[train_idx]
+        test_idx =
+        train_x = self.description_dataset.loc[train_idx]
         test_x = np.delete(self.description_dataset, train_idx)
 
         # Subset y
