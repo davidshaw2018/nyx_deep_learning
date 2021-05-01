@@ -1,12 +1,10 @@
 import json
-import requests
 from typing import Dict, List, Tuple
+from pathlib import Path
 
 import tensorflow as tf
 import tensorflow_hub as hub
-import tensorflow_text as text
 
-from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
 
@@ -15,7 +13,8 @@ from loguru import logger
 
 class NLPPipeline:
 
-    def __init__(self, description_dataset: List, counts_dataset: pd.Series):
+    def __init__(self, ids: np.array, description_dataset: np.array, counts_dataset: pd.Series):
+        self.book_ids = ids
         self.description_dataset = description_dataset
         self.counts_dataset = counts_dataset
 
@@ -48,34 +47,23 @@ class NLPPipeline:
 
     def preprocess(self) -> Tuple[List]:
         logger.info("Start preprocessing")
-        ids = []
-        descriptions = []
-        for book in self.description_dataset:
-            if book['description']:
-                try:
-                    ids.append(int(book['book_id']))
-                except KeyError:
-                    # For predictions, id might not be needed
-                    logger.warning("Book_id not present in keys, omitting")
-                descriptions.append(book['description'])
 
         # Train test splitting
         # Randomly sample data
-        ids, descriptions = np.array(ids), np.array(descriptions)
-        n_samples = len(descriptions)
+        n_samples = len(self.description_dataset)
         train_idx = np.random.choice(range(n_samples), size=(int(0.8 * n_samples),), replace=False)
 
-        train_x = descriptions[train_idx]
-        test_x = np.delete(descriptions, train_idx)
+        train_x = self.description_dataset[train_idx]
+        test_x = np.delete(self.description_dataset, train_idx)
 
         # Subset y
-        mask = self.counts_dataset.index.isin(ids)
-        train_y = np.array(self.counts_dataset[mask])
-        test_y = np.array(self.counts_dataset[~mask])
+        mask = self.counts_dataset.index.isin(self.book_ids[train_idx])
+        train_y = self.counts_dataset[mask]
+        test_y = self.counts_dataset[~mask]
+        breakpoint()
 
-        # HACK!!! Please remove. Only for testing
-        # train_y = np.random.randint(0, 20, (len(train_x),))
-        # test_y = np.random.randint(0, 20, (len(test_x),))
+        assert len(train_y) == len(train_x)
+        assert len(test_y) == len(test_x)
 
         return train_x, test_x, train_y, test_y
 
@@ -100,41 +88,26 @@ class NLPPipeline:
         return model
 
     def save_model(self, model, output_path):
-        NotImplemented
+        dest_path = Path(output_path) / 'model.h5'
+        logger.info(f"Saving to {dest_path}")
+        model.save(dest_path)
 
     def run(self):
 
         train_processed, test_processed, train_y, test_y = self.preprocess()
         model = self.build_model()
         model_fit = self.fit_model(train_processed, train_y, test_processed, test_y, model)
-        self.save_model(model_fit)
+        self.save_model(model_fit, '/users/shawd/nyx/results')
 
 
-def load_description_data(input_filepath: str, subsample: int = None) -> List[Dict]:
-    with open(input_filepath, 'r') as f:
+def load_description_data(input_filepath: str, subsample: int = None) -> pd.DataFrame:
 
-        output = []
-
-        while f:
-            data = json.loads(f.readline())
-            output.append(data)
-            if subsample:
-                if len(output) > subsample:
-                    break
-        return output
-
-
-def load_book_counts_data(input_filepath: str, subsample: int = None) -> pd.Series:
-    df = pd.read_csv(input_filepath, nrows=subsample)
-    summary = df.groupby('book_id').is_read.sum()
-    return summary
-
+    df = pd.read_csv(input_filepath, use_cols=['text_reviews_count_bks', 'description'], subsample=subsample)
+    return df
 
 if __name__ == '__main__':
 
-    description_dataset = load_description_data('/users/shawd/nyx/data/goodreads_books.json', subsample=100)
+    description_dataset = load_description_data('/users/shawd/nyx/data/BooksMerged2000.csv')
 
-    book_counts_dataset = load_book_counts_data('/users/shawd/nyx/data/goodreads_interactions.csv', subsample=100)
-
-    pipeline = NLPPipeline(description_dataset, book_counts_dataset)
+    pipeline = NLPPipeline(description_dataset)
     pipeline.run()
