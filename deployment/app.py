@@ -1,20 +1,21 @@
 from flask import Flask, request
-import tensorflow_hub as hub
 from tensorflow import keras
+import tensorflow_hub as hub
+import tensorflow_text as text
+from typing import List
 
 app = Flask(__name__)
-model = keras.models.load_model('model.h5')
-tokenizer = hub.load('https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/1')
+model = keras.models.load_model('model')
 
 
 @app.route('/predict_sales', method=['POST'])
 def predict_sales():
     # Unpack the json data string, and get a pred
-    tagline = request.form['tagline']
-
-    # Tokenize
-    tokenized = tokenizer(tagline)
+    tagline: List[str] = request.form['tagline']
 
     # Predict
-    expected_reads = model.predict(tokenized)
+    expected_reads: List[int] = model.predict(tagline)
     return expected_reads
+
+if __name__ == '__main__':
+	app.run(debug=True, host='0.0.0.0')
