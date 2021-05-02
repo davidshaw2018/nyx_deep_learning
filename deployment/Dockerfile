@@ -2,10 +2,8 @@ FROM python:3.7
 
 WORKDIR /app
 
-COPY ./results/model.h5
-COPY ./app.py
-RUN pip install flask tensorflow tensorflow_hub
+COPY ./results/model/ /app/model
+COPY ./app.py /app/
+RUN pip install flask tensorflow tensorflow_hub tensorflow_text
 
 ENV FLASK_APP=/app/app.py
-
-CMD ['flask run']
