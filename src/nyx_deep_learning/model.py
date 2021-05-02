@@ -23,7 +23,7 @@ class NLPPipeline:
             return self._preprocessor
         except AttributeError:
             logger.info("Pulling preprocessor from TF Hub")
-            self._preprocessor = hub.load('https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/1')
+            self._preprocessor = hub.load('https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/3')
             return self._preprocessor
 
     @property
@@ -34,15 +34,6 @@ class NLPPipeline:
             logger.info("Pulling encoder from TFHub")
             self._encoder = hub.load('https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/3')
             return self._encoder
-
-    @property
-    def bert_model(self):
-        try:
-            return self._bert_model
-        except AttributeError:
-            logger.info("Pulling bert model from TFHub")
-            self._bert_model = hub.load('https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-4_H-512_A-8/1')
-            return self._bert_model
 
     def preprocess(self) -> Tuple[pd.Series]:
         logger.info("Start preprocessing")
@@ -55,7 +46,7 @@ class NLPPipeline:
         # Randomly sample data
 
         n_samples = len(cleaned_dataset)
-        train_idx = np.random.choice(range(n_samples), size=(int(0.5 * n_samples),), replace=False)
+        train_idx = np.random.choice(range(n_samples), size=(int(0.8 * n_samples),), replace=False)
         train_x = cleaned_dataset.loc[train_idx].description
         test_x = cleaned_dataset.drop(train_idx).description
 
@@ -87,7 +78,7 @@ class NLPPipeline:
         return model
 
     def save_model(self, model, output_path):
-        dest_path = Path(output_path) / 'model.h5'
+        dest_path = Path(output_path) / 'model'
         logger.info(f"Saving to {dest_path}")
         model.save(dest_path)
 
@@ -107,7 +98,7 @@ def load_description_data(input_filepath: str, subsample: int = None) -> pd.Data
 
 if __name__ == '__main__':
 
-    description_dataset = load_description_data('BooksMerged2000.csv')
+    description_dataset = load_description_data('/users/shawd/nyx/data/BooksMerged2000.csv', subsample=40)
 
     pipeline = NLPPipeline(description_dataset)
     pipeline.run()
