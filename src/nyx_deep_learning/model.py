@@ -55,7 +55,7 @@ class NLPPipeline:
         # Randomly sample data
 
         n_samples = len(cleaned_dataset)
-        train_idx = np.random.choice(range(n_samples), size=(int(0.8 * n_samples),), replace=False)
+        train_idx = np.random.choice(range(n_samples), size=(int(0.5 * n_samples),), replace=False)
         train_x = cleaned_dataset.loc[train_idx].description
         test_x = cleaned_dataset.drop(train_idx).description
 
@@ -83,7 +83,7 @@ class NLPPipeline:
         opt = Adam(lr=.0001)
         model.compile(optimizer=opt, loss='mean_squared_error')
         es = tf.keras.callbacks.EarlyStopping(patience=3)
-        model.fit(x=train_x, y=train_y, validation_data=(test_x, test_y), callbacks=es, epochs=100)
+        model.fit(x=train_x, y=train_y, validation_data=(test_x, test_y), callbacks=es, epochs=1)
         return model
 
     def save_model(self, model, output_path):
@@ -96,7 +96,7 @@ class NLPPipeline:
         train_processed, test_processed, train_y, test_y = self.preprocess()
         model = self.build_model()
         model_fit = self.fit_model(train_processed, train_y, test_processed, test_y, model)
-        self.save_model(model_fit, '/users/shawd/nyx/results')
+        self.save_model(model_fit, 'results')
 
 
 def load_description_data(input_filepath: str, subsample: int = None) -> pd.DataFrame:
@@ -107,7 +107,7 @@ def load_description_data(input_filepath: str, subsample: int = None) -> pd.Data
 
 if __name__ == '__main__':
 
-    description_dataset = load_description_data('/users/shawd/nyx/data/BooksMerged2000.csv')
+    description_dataset = load_description_data('BooksMerged2000.csv')
 
     pipeline = NLPPipeline(description_dataset)
     pipeline.run()
